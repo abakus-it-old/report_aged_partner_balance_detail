@@ -58,16 +58,16 @@
                     <thead>
                         <tr>
                             <th>Partners</th>
-                            <th class="text-right">
+                            <th class="text-right" style="width: 9%">
                                 <span t-if="data['form']['direction_selection'] == 'future'">Due</span>
                                 <span t-if="data['form']['direction_selection'] != 'future'">Not due</span>
                             </th>
-                            <th class="text-right"><span t-esc="data['form']['4']['name']"/></th>
-                            <th class="text-right"><span t-esc="data['form']['3']['name']"/></th>
-                            <th class="text-right"><span t-esc="data['form']['2']['name']"/></th>
-                            <th class="text-right"><span t-esc="data['form']['1']['name']"/></th>
-                            <th class="text-right"><span t-esc="data['form']['0']['name']"/></th>
-                            <th class="text-right">Total</th>
+                            <th class="text-right" style="width: 9%"><span t-esc="data['form']['4']['name']"/></th>
+                            <th class="text-right" style="width: 9%"><span t-esc="data['form']['3']['name']"/></th>
+                            <th class="text-right" style="width: 9%"><span t-esc="data['form']['2']['name']"/></th>
+                            <th class="text-right" style="width: 9%"><span t-esc="data['form']['1']['name']"/></th>
+                            <th class="text-right" style="width: 9%"><span t-esc="data['form']['0']['name']"/></th>
+                            <th class="text-right" style="width: 9%">Total</th>
                         </tr>
                         <tr t-if="get_lines(data['form']) or get_lines_with_out_partner(data['form'])">
                             <th>Account Total</th>
@@ -110,52 +110,36 @@
                             </tr>
                             
                             <t t-if="partner['lines']">
-                                <tr>
-                                    
-                                    <td colspan="8">
-                                        <table class="table table-condensed table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <td>Date</td>
-                                                    <td>JRNL</td>
-                                                    <td>Ref</td>
-                                                    <td>Account</td>
-                                                    <td>Entry Label</td>
-                                                    <td>Debit</td>
-                                                    <td>Credit</td>
-                                                    <td>Balance</td>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr t-foreach="partner['lines']" t-as="line">
-                                                    <td>
-                                                        <span t-esc="formatLang(line['date'], date=True)"/>
-                                                    </td>
-                                                    <td>
-                                                        <span t-esc="line['code']"/>
-                                                    </td>
-                                                    <td>
-                                                        <span t-esc="line['move_name']"/>
-                                                    </td>
-                                                    <td>
-                                                        <span t-esc="line['a_code']"/>
-                                                    </td>
-                                                    <td>
-                                                        <span t-esc="line['ref']"/>-<span t-esc="line['name']"/>
-                                                    </td>
-                                                    <td class="text-right">
-                                                        <span t-esc="formatLang(line['debit'], currency_obj=res_company.currency_id)"/>
-                                                    </td>
-                                                    <td class="text-right">
-                                                        <span t-esc="formatLang(line['credit'], currency_obj=res_company.currency_id)"/>
-                                                    </td>
-                                                    <td class="text-right">
-                                                        <span t-esc="formatLang(line['progress'], currency_obj=res_company.currency_id)"/>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                <tr t-foreach="partner['lines']" t-as="line">
+                                    <td class="text-left" style="padding-left: 20px;">
+                                        <small>
+                                            Due date: <span t-esc="formatLang(line['due_date'], date=True)"/> |
+                                            Jrnl: <span t-esc="line['journal']"/> | 
+                                            Label: <span t-esc="line['entry_label']"/><br/>
+                                            Ref: <span t-esc="line['ref']"/>
+                                        </small>
                                     </td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(line['5'], currency_obj=res_company.currency_id)"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(line['4'], currency_obj=res_company.currency_id)"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(line['3'], currency_obj=res_company.currency_id)"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(line['2'], currency_obj=res_company.currency_id)"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(line['1'], currency_obj=res_company.currency_id)"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(line['0'], currency_obj=res_company.currency_id)"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(line['total'], currency_obj=res_company.currency_id)"/>
+                                    </td>               
                                 </tr>
                             </t>
                         </t>

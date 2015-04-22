@@ -108,43 +108,7 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
         for i in t:
             totals[i[0]] = i[1]
 
-        # This dictionary will store the future or past of all partners
-        future_past = {}
-        if self.direction_selection == 'future':
-            self.cr.execute('SELECT l.partner_id, SUM(l.debit-l.credit) \
-                        FROM account_move_line AS l, account_account, account_move am \
-                        WHERE (l.account_id=account_account.id) AND (l.move_id=am.id) \
-                        AND (am.state IN %s)\
-                        AND (account_account.type IN %s)\
-                        AND (COALESCE(l.date_maturity, l.date) < %s)\
-                        AND (l.partner_id IN %s)\
-                        AND ((l.reconcile_id IS NULL)\
-                        OR (l.reconcile_id IN (SELECT recon.id FROM account_move_reconcile AS recon WHERE recon.create_date > %s )))\
-                        AND '+ self.query + '\
-                        AND account_account.active\
-                    AND (l.date <= %s)\
-                        GROUP BY l.partner_id', (tuple(move_state), tuple(self.ACCOUNT_TYPE), self.date_from, tuple(partner_ids),self.date_from, self.date_from,))
-            t = self.cr.fetchall()
-            for i in t:
-                future_past[i[0]] = i[1]
-        elif self.direction_selection == 'past': # Using elif so people could extend without this breaking
-            self.cr.execute('SELECT l.partner_id, SUM(l.debit-l.credit) \
-                    FROM account_move_line AS l, account_account, account_move am \
-                    WHERE (l.account_id=account_account.id) AND (l.move_id=am.id)\
-                        AND (am.state IN %s)\
-                        AND (account_account.type IN %s)\
-                        AND (COALESCE(l.date_maturity,l.date) > %s)\
-                        AND (l.partner_id IN %s)\
-                        AND ((l.reconcile_id IS NULL)\
-                        OR (l.reconcile_id IN (SELECT recon.id FROM account_move_reconcile AS recon WHERE recon.create_date > %s )))\
-                        AND '+ self.query + '\
-                        AND account_account.active\
-                    AND (l.date <= %s)\
-                        GROUP BY l.partner_id', (tuple(move_state), tuple(self.ACCOUNT_TYPE), self.date_from, tuple(partner_ids), self.date_from, self.date_from,))
-            t = self.cr.fetchall()
-            for i in t:
-                future_past[i[0]] = i[1]
-
+            
         # Use one query per period and store results in history (a list variable)
         # Each history will contain: history[1] = {'<partner_id>': <partner_debit-credit>}
         history = []
@@ -161,22 +125,31 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
                 dates_query += ' < %s)'
                 args_list += (form[str(i)]['stop'],)
             args_list += (self.date_from,)
-            self.cr.execute('''SELECT l.partner_id, SUM(l.debit-l.credit), l.reconcile_partial_id
-                    FROM account_move_line AS l, account_account, account_move am 
-                    WHERE (l.account_id = account_account.id) AND (l.move_id=am.id)
+            
+            #MODIFIED            
+            
+            self.cr.execute('''SELECT l.partner_id, SUM(l.debit-l.credit), l.reconcile_partial_id, l.date_maturity, l.ref, j.code, am.name, acc.code 
+                    FROM account_move_line l
+                    LEFT JOIN account_journal j ON (l.journal_id = j.id)
+                    LEFT JOIN account_account acc ON (l.account_id = acc.id)
+                    LEFT JOIN res_currency c ON (l.currency_id=c.id)
+                    LEFT JOIN account_move am ON (am.id=l.move_id)
+                    WHERE (l.account_id = acc.id) AND (l.move_id=am.id)
                         AND (am.state IN %s)
-                        AND (account_account.type IN %s)
+                        AND (acc.type IN %s)
                         AND (l.partner_id IN %s)
                         AND ((l.reconcile_id IS NULL)
                           OR (l.reconcile_id IN (SELECT recon.id FROM account_move_reconcile AS recon WHERE recon.create_date > %s )))
                         AND ''' + self.query + '''
-                        AND account_account.active
+                        AND acc.active
                         AND ''' + dates_query + '''
                     AND (l.date <= %s)
-                    GROUP BY l.partner_id, l.reconcile_partial_id''', args_list)
+                    GROUP BY l.partner_id, l.reconcile_partial_id, l.date_maturity, l.ref, j.code, am.name, acc.code''', args_list)
             partners_partial = self.cr.fetchall()
+
             partners_amount = dict((i[0],0) for i in partners_partial)
             for partner_info in partners_partial:
+                amount = 0
                 if partner_info[2]:
                     # in case of partial reconciliation, we want to keep the left amount in the oldest period
                     self.cr.execute('''SELECT MIN(COALESCE(date_maturity,date)) FROM account_move_line WHERE reconcile_partial_id = %s''', (partner_info[2],))
@@ -187,23 +160,88 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
                                            FROM account_move_line AS l
                                            WHERE l.reconcile_partial_id = %s''', (partner_info[2],))
                         unreconciled_amount = self.cr.fetchall()
-                        partners_amount[partner_info[0]] += unreconciled_amount[0][0]
+                        amount = unreconciled_amount[0][0]
+                        partners_amount[partner_info[0]] += amount
+                        
                 else:
-                    partners_amount[partner_info[0]] += partner_info[1]
+                    amount = partner_info[1]
+                    partners_amount[partner_info[0]] += amount
+                
+                #MODIFIED
+                if not partners_amount.has_key(str(partner_info[0])+'dict'):
+                    partners_amount[str(partner_info[0])+'dict'] = []
+                
+                move_line_info = {'due_date': partner_info[3], 'journal': partner_info[5], 'ref': partner_info[4], 'account': partner_info[7], 'entry_label': partner_info[6], 'amount': amount}
+                partners_amount[str(partner_info[0])+'dict'].append(move_line_info)
+
             history.append(partners_amount)
 
-        
-        #START NEW
-        self.cr.execute(
-            "SELECT a.id " \
-            "FROM account_account a " \
-            "LEFT JOIN account_account_type t " \
-                "ON (a.type=t.code) " \
-                'WHERE a.type IN %s' \
-                "AND a.active", (tuple(self.ACCOUNT_TYPE), ))
-        account_ids = [a for (a,) in self.cr.fetchall()]
-        #END NEW
-        
+            
+        # This dictionary will store the future or past of all partners
+        future_past = {}
+        if self.direction_selection == 'future':
+            self.cr.execute('SELECT l.partner_id, SUM(l.debit-l.credit), l.date_maturity, l.ref, j.code, am.name, acc.code \
+                            FROM account_move_line l \
+                            LEFT JOIN account_journal j ON (l.journal_id = j.id) \
+                            LEFT JOIN account_account acc ON (l.account_id = acc.id) \
+                            LEFT JOIN res_currency c ON (l.currency_id=c.id) \
+                            LEFT JOIN account_move am ON (am.id=l.move_id) \
+                            WHERE (l.account_id=acc.id) AND (l.move_id=am.id) \
+                                AND (am.state IN %s)\
+                                AND (acc.type IN %s)\
+                                AND (COALESCE(l.date_maturity, l.date) < %s)\
+                                AND (l.partner_id IN %s)\
+                                AND ((l.reconcile_id IS NULL)\
+                                OR (l.reconcile_id IN (SELECT recon.id FROM account_move_reconcile AS recon WHERE recon.create_date > %s )))\
+                                AND '+ self.query + '\
+                                AND acc.active\
+                                AND (l.date <= %s)\
+                            GROUP BY l.partner_id, l.date_maturity, l.ref, j.code, am.name, acc.code', (tuple(move_state), tuple(self.ACCOUNT_TYPE), self.date_from, tuple(partner_ids),self.date_from, self.date_from,))
+            t = self.cr.fetchall()
+            
+            line_dict = {}
+            for i in t:
+                future_past[i[0]] = i[1]
+                if not line_dict.has_key(str(i[0])+'dict'):
+                    line_dict[str(i[0])+'dict'] = []
+                
+                move_line_info = {'due_date': i[2], 'journal': i[4], 'ref': i[3], 'account': i[6], 'entry_label': i[5], 'amount': i[1]}
+                line_dict[str(i[0])+'dict'].append(move_line_info)
+
+            history.append(line_dict)
+                
+        elif self.direction_selection == 'past': # Using elif so people could extend without this breaking
+            self.cr.execute('SELECT l.partner_id, SUM(l.debit-l.credit), l.date_maturity, l.ref, j.code, am.name, acc.code \
+                            FROM account_move_line l \
+                            LEFT JOIN account_journal j ON (l.journal_id = j.id) \
+                            LEFT JOIN account_account acc ON (l.account_id = acc.id) \
+                            LEFT JOIN res_currency c ON (l.currency_id=c.id) \
+                            LEFT JOIN account_move am ON (am.id=l.move_id) \
+                            WHERE (l.account_id=acc.id) AND (l.move_id=am.id)\
+                                AND (am.state IN %s)\
+                                AND (acc.type IN %s)\
+                                AND (COALESCE(l.date_maturity,l.date) > %s)\
+                                AND (l.partner_id IN %s)\
+                                AND ((l.reconcile_id IS NULL)\
+                                OR (l.reconcile_id IN (SELECT recon.id FROM account_move_reconcile AS recon WHERE recon.create_date > %s )))\
+                                AND '+ self.query + '\
+                                AND acc.active\
+                                AND (l.date <= %s)\
+                                GROUP BY l.partner_id, l.date_maturity, l.ref, j.code, am.name, acc.code', (tuple(move_state), tuple(self.ACCOUNT_TYPE), self.date_from, tuple(partner_ids), self.date_from, self.date_from,))
+            t = self.cr.fetchall()
+            
+            line_dict = {}
+            for i in t:
+                future_past[i[0]] = i[1]
+                if not line_dict.has_key(str(i[0])+'dict'):
+                    line_dict[str(i[0])+'dict'] = []
+                
+                move_line_info = {'due_date': i[2], 'journal': i[4], 'ref': i[3], 'account': i[6], 'entry_label': i[5], 'amount': i[1]}
+                line_dict[str(i[0])+'dict'].append(move_line_info)
+
+            history.append(line_dict)
+            
+            
         for partner in partners:
             values = {}
             ## If choise selection is in the future
@@ -222,6 +260,21 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
 
                 self.total_account[6] = self.total_account[6] + (after and after[0] or 0.0)
                 values['direction'] = after and after[0] or 0.0
+            
+            #NEW START
+            lines = []
+            for i in range(6):
+                if history[i].has_key(str(partner['id'])+'dict'):
+                    for line in history[i][str(partner['id'])+'dict']:
+                        line['name'] = '%s|%s|%s|%s|%s'%(line['due_date'],line['journal'],line['ref'],line['account'],line['entry_label'])
+                        line[str(i)] = line['amount']
+                        line['total'] = line['amount']
+                        for j in range(6):
+                            if j != i:
+                                line[str(j)] = 0.0
+                        lines.insert( 0, line)
+            values['lines'] = sorted(lines, key=lambda k: k['due_date'], reverse=True)
+            #NEW END
 
             for i in range(5):
                 during = False
@@ -230,6 +283,7 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
                 # Ajout du compteur
                 self.total_account[(i)] = self.total_account[(i)] + (during and during[0] or 0)
                 values[str(i)] = during and during[0] or 0.0
+            
             total = False
             if totals.has_key( partner['id'] ):
                 total = [ totals[partner['id']] ]
@@ -237,47 +291,6 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
             ## Add for total
             self.total_account[(i+1)] = self.total_account[(i+1)] + (total and total[0] or 0.0)
             values['name'] = partner['name']
-            
-            #NEW START
-            values['lines'] = False;
-            
-            #move_state = ['draft','posted']
-            #if self.target_move == 'posted':
-            #    move_state = ['posted']
-
-            full_account = []
-            
-            #MODIFIED
-            #if self.reconcil:
-            RECONCILE_TAG = " "
-            #else:
-            #    RECONCILE_TAG = "AND l.reconcile_id IS NULL"
-            self.cr.execute(
-                "SELECT l.id, l.date, j.code, acc.code as a_code, acc.name as a_name, l.ref, m.name as move_name, l.name, l.debit, l.credit, l.amount_currency,l.currency_id, c.symbol AS currency_code " \
-                "FROM account_move_line l " \
-                "LEFT JOIN account_journal j " \
-                    "ON (l.journal_id = j.id) " \
-                "LEFT JOIN account_account acc " \
-                    "ON (l.account_id = acc.id) " \
-                "LEFT JOIN res_currency c ON (l.currency_id=c.id)" \
-                "LEFT JOIN account_move m ON (m.id=l.move_id)" \
-                "WHERE l.partner_id = %s " \
-                    "AND l.account_id IN %s AND " + self.query +" " \
-                    "AND m.state IN %s " \
-                    " " + RECONCILE_TAG + " "\
-                    "ORDER BY l.date",
-                    (partner['id'], tuple(account_ids), tuple(move_state)))
-            resLines = self.cr.dictfetchall()
-            sum = 0.0
-            #if self.initial_balance:
-            #    sum = self.init_bal_sum
-            for r in resLines:
-                sum += r['debit'] - r['credit']
-                r['progress'] = sum
-                full_account.append(r)
-            values['lines'] = full_account
-           
-            #NEW END
 
             res.append(values)
 
