@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <openerp>
 <data>
 <report 
@@ -96,7 +96,7 @@
                                     <span t-esc="partner['name']"/>
                                 </th>
                                 <th class="text-right">
-                                    <span t-esc="formatLang(partner['direction'], currency_obj=res_company.currency_id)"/>
+                                    <t t-if="partner['direction'] and partner['direction']>0"><span t-esc="formatLang(partner['direction'], currency_obj=res_company.currency_id)"/></t>
                                 </th>
                                 <th class="text-right">
                                     <span t-esc="formatLang(partner['4'], currency_obj=res_company.currency_id)"/>
@@ -127,25 +127,25 @@
                                         Ref: <span t-esc="line['ref']"/>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="formatLang(line['5'], currency_obj=res_company.currency_id)"/>
+                                        <t t-if="line['5'] and line['5']>0"><span t-esc="formatLang(line['5'], currency_obj=res_company.currency_id)"/></t>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="formatLang(line['4'], currency_obj=res_company.currency_id)"/>
+                                        <t t-if="line['4'] and line['4']>0"><span t-esc="formatLang(line['4'], currency_obj=res_company.currency_id)"/></t>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="formatLang(line['3'], currency_obj=res_company.currency_id)"/>
+                                        <t t-if="line['3'] and line['3']>0"><span t-esc="formatLang(line['3'], currency_obj=res_company.currency_id)"/></t>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="formatLang(line['2'], currency_obj=res_company.currency_id)"/>
+                                        <t t-if="line['2'] and line['2']>0"><span t-esc="formatLang(line['2'], currency_obj=res_company.currency_id)"/></t>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="formatLang(line['1'], currency_obj=res_company.currency_id)"/>
+                                        <t t-if="line['1'] and line['1']>0"><span t-esc="formatLang(line['1'], currency_obj=res_company.currency_id)"/></t>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="formatLang(line['0'], currency_obj=res_company.currency_id)"/>
+                                        <t t-if="line['0'] and line['0']>0"><span t-esc="formatLang(line['0'], currency_obj=res_company.currency_id)"/></t>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="formatLang(line['total'], currency_obj=res_company.currency_id)"/>
+                                        <t t-if="line['total'] and line['total']>0"><span t-esc="formatLang(line['total'], currency_obj=res_company.currency_id)"/></t>
                                     </td>               
                                 </tr>
                             </t>
