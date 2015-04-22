@@ -10,6 +10,15 @@
     file="report_aged_partner_balance_detail.report_agedpartnerbalancedetail"
     menu="False"
 />    
+
+<record id="paperformat_default_with_landscape" model="report.paperformat">
+   <field name="name">Default with Landscape</field>
+   <field name="orientation">Landscape</field>
+</record>
+
+<record id="action_report_aged_partner_balance_detail" model="ir.actions.report.xml">
+    <field name="paperformat_id" ref="paperformat_default_with_landscape"/>
+</record>   
     
 <template id="report_agedpartnerbalancedetail">
     <t t-call="report.html_container">
@@ -77,7 +86,7 @@
                             <th class="text-right"><span t-esc="formatLang(get_for_period(2), currency_obj=res_company.currency_id)"/></th>
                             <th class="text-right"><span t-esc="formatLang(get_for_period(1), currency_obj=res_company.currency_id)"/></th>
                             <th class="text-right"><span t-esc="formatLang(get_for_period(0), currency_obj=res_company.currency_id)"/></th>
-                            <th class="text-right"><span t-esc="formatLang(get_for_period(5), currency_obj=res_company.currency_id)"/></th>
+                            <th class="text-right">- <span t-esc="formatLang(get_for_period(5), currency_obj=res_company.currency_id)"/></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -112,12 +121,10 @@
                             <t t-if="partner['lines']">
                                 <tr t-foreach="partner['lines']" t-as="line">
                                     <td class="text-left" style="padding-left: 20px;">
-                                        <small>
-                                            Due date: <span t-esc="formatLang(line['due_date'], date=True)"/> |
-                                            Jrnl: <span t-esc="line['journal']"/> | 
-                                            Label: <span t-esc="line['entry_label']"/><br/>
-                                            Ref: <span t-esc="line['ref']"/>
-                                        </small>
+                                        Due Date: <span t-esc="formatLang(line['due_date'], date=True)"/> | 
+                                        Jrnl: <span t-esc="line['journal']"/> | 
+                                        Label: <span t-esc="line['entry_label']"/> | 
+                                        Ref: <span t-esc="line['ref']"/>
                                     </td>
                                     <td class="text-right">
                                         <span t-esc="formatLang(line['5'], currency_obj=res_company.currency_id)"/>
