@@ -86,7 +86,7 @@
                             <th class="text-right"><span t-esc="formatLang(get_for_period(2), currency_obj=res_company.currency_id)"/></th>
                             <th class="text-right"><span t-esc="formatLang(get_for_period(1), currency_obj=res_company.currency_id)"/></th>
                             <th class="text-right"><span t-esc="formatLang(get_for_period(0), currency_obj=res_company.currency_id)"/></th>
-                            <th class="text-right">- <span t-esc="formatLang(get_for_period(5), currency_obj=res_company.currency_id)"/></th>
+                            <th class="text-right"><span t-esc="formatLang(get_for_period(5), currency_obj=res_company.currency_id)"/></th>
                         </tr>
                     </thead>
                     <tbody>
