@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
@@ -201,7 +201,9 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
             
             line_dict = {}
             for i in t:
-                future_past[i[0]] = i[1]
+                if not future_past.has_key(i[0]):
+                    future_past[i[0]] = 0
+                future_past[i[0]] += i[1]
                 if not line_dict.has_key(str(i[0])+'dict'):
                     line_dict[str(i[0])+'dict'] = []
                 
@@ -232,7 +234,9 @@ class aged_trial_detail_report(report_sxw.rml_parse, common_report_header):
             
             line_dict = {}
             for i in t:
-                future_past[i[0]] = i[1]
+                if not future_past.has_key(i[0]):
+                    future_past[i[0]] = 0
+                future_past[i[0]] += i[1]
                 if not line_dict.has_key(str(i[0])+'dict'):
                     line_dict[str(i[0])+'dict'] = []
                 
